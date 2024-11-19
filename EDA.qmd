@@ -1,0 +1,146 @@
+---
+title: "EDA Proposal"
+author: "Akash Sivasubramanian - 0862944"
+format: pdf
+---
+
+# Project Title :
+# Dataset used:
+# Team Members: Akash Sivasubramanian - 0862944
+
+Importing the required libraries
+```{r}
+library(tidyverse)
+
+```
+```{r}
+# Importing the dataset
+tuesdata <- tidytuesdayR::tt_load('2023-10-10')
+haunted_places <- tuesdata$haunted_places
+
+# Glimpse of the dataset
+haunted_places %>% glimpse()
+head(haunted_places)
+```
+```{r}
+# Counting unique values in each column
+column_summary <- haunted_places %>%
+  summarise(across(everything(), ~ n_distinct(.)))
+column_summary
+```
+Wow there are 9904 unique locations in 4386 unique cities across usa. This is interesting.
+Hmm things going weired because there are only 50 states in the US but we have 51 unique values in the state column. Let's dig deeper into this.
+
+```{r}
+# Get unique values in the state column in alphabetical order.
+unique_states <- haunted_places %>%
+  distinct(state) %>%
+  arrange(state)
+
+unique_states
+```
+Gottcha there is a value 'Washington D.C.' which is not a state but a federal district. Let's correct this.
+we can dig deeper into the dataset to find out the haunted places in Washington D.C.
+
+```{r}
+# Haunted places in Washington D.C.
+haunted_places_dc <- haunted_places %>%
+  filter(state == "Washington DC")
+haunted_places_dc
+```
+OK Ok. I think there is lot going on in the Us.
+"After some web search I found that the Wasington DC is a separate entity from the US but overseen by US"
+Ohh, That's there political concern. Iam going to keep it as it is.
+
+```{r}
+# Cleaning the dataset
+# Removing redundant columns
+haunted_places <- haunted_places %>%
+  select(city, description, location, state, state_abbrev, latitude, longitude, city_latitude, city_longitude)
+```
+
+```{r}
+# Checking for missing values
+missing_values <- haunted_places %>%
+  summarise(across(everything(), ~ sum(is.na(.))))
+missing_values
+```
+```{r}
+# Dig deeper into the missing values
+# Rows where 'city' has missing values
+missing_city_rows <- haunted_places[is.na(haunted_places$city), ]
+missing_city_rows
+
+missing_location_rows <- haunted_places[is.na(haunted_places$location), ]
+missing_location_rows
+
+# removing the rows with missing values in city and location columns
+haunted_places <- haunted_places %>%
+  filter(!is.na(city) & !is.na(location))
+
+# Checking for missing values
+missing_values <- haunted_places %>%
+  summarise(across(everything(), ~ sum(is.na(.))))
+missing_values
+```
+
+Check the Exact duplicate values in the dataset
+
+```{r}
+
+nrow(haunted_places)
+```
+
+```{r}
+
+# Before removing the duplicates
+nrow(haunted_places)
+
+# Find exact duplicates
+duplicate_rows <- haunted_places %>%
+  group_by(across(everything())) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+# Display the duplicate rows
+print(duplicate_rows)
+
+# Remove the Exact duplicate rows
+haunted_places <- haunted_places %>%
+  distinct()
+
+# find the total number of rows in the dataset after removing the duplicates
+nrow(haunted_places)
+
+```
+
+
+createing a frequency table for the city and location columns
+```{r}
+# Frequency table for city column
+city_freq <- haunted_places %>%
+  count(city, sort = TRUE)
+
+city_freq
+
+# Frequency table for location column
+location_freq <- haunted_places %>%
+  count(location, sort = TRUE)
+
+location_freq
+
+# Frequency table for state column
+state_freq <- haunted_places %>%
+  count(state, sort = TRUE)
+
+state_freq
+
+
+```
+
+
+
+
+
+
+
