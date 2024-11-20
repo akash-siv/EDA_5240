@@ -1,7 +1,7 @@
 ---
 title: "EDA Proposal"
 author: "Akash Sivasubramanian - 0862944"
-format: pdf
+format: html
 ---
 
 # Project Title :
@@ -67,16 +67,9 @@ missing_values
 ```
 ```{r}
 # Dig deeper into the missing values
-# Rows where 'city' has missing values
-missing_city_rows <- haunted_places[is.na(haunted_places$city), ]
-missing_city_rows
-
-missing_location_rows <- haunted_places[is.na(haunted_places$location), ]
-missing_location_rows
-
-# removing the rows with missing values in city and location columns
+# removing the rows with missing values in city, location, city_latitude, city_longitude columns
 haunted_places <- haunted_places %>%
-  filter(!is.na(city) & !is.na(location))
+  filter(!is.na(city) & !is.na(location) & !is.na(city_latitude) & !is.na(city_longitude))
 
 # Checking for missing values
 missing_values <- haunted_places %>%
@@ -85,11 +78,6 @@ missing_values
 ```
 
 Check the Exact duplicate values in the dataset
-
-```{r}
-
-nrow(haunted_places)
-```
 
 ```{r}
 
@@ -115,7 +103,7 @@ nrow(haunted_places)
 ```
 
 
-createing a frequency table for the city and location columns
+creating a frequency table for the city ,location and state columns
 ```{r}
 # Frequency table for city column
 city_freq <- haunted_places %>%
@@ -139,8 +127,174 @@ state_freq
 ```
 
 
+```{r}
+
+# wordcloud for city column
+wordcloud2(city_freq, size = 0.7)
+
+# wordcloud for location column
+wordcloud2(location_freq, size = 0.7)
+
+# wordcloud for state column
+wordcloud2(state_freq, size = 0.7)
+
+```
 
 
+```{r}
+# Converting the the wordcloud into image
+# load wordcloud2
+library(wordcloud2) 
+
+# install webshot
+library(webshot)
+webshot::install_phantomjs()
+
+# Make the graph
+my_graph <- wordcloud2(demoFreq, size=1.5)
+
+# save it in html
+library("htmlwidgets")
+saveWidget(my_graph,"tmp.html",selfcontained = F)
+
+# and in png or pdf
+webshot("tmp.html","fig_1.pdf", delay =5, vwidth = 480, vheight=480)
+```
+
+```{r}
+# Expirementation with leaflet
+library(leaflet)
+# Create 20 markers (Random points)
+data = data.frame(
+   long=sample(seq(-150,150),20),
+   lat=sample(seq(-50,50),20),
+   val=round(rnorm(20),2),
+   name=paste("point",letters[1:20],sep="_")
+) 
+ 
+# Show a CUSTOM circle at each position. Size defined in Pixel. Size does not change when you zoom
+m=leaflet(data = data) %>%
+   addTiles() %>%
+   addCircleMarkers(
+      ~long, ~lat, 
+      radius=~val*14 , 
+      color=~ifelse(data$val>0 , "red", "orange"),
+      stroke = TRUE, 
+      fillOpacity = 0.2,
+      popup = ~as.character(name)
+   ) 
+m
+```
+
+
+```{r}
+# Filter rows where 'location' contains "Cemetery"
+cemetery_coordinates <- haunted_places %>%
+  filter(grepl("cemetery", location, ignore.case = TRUE)) %>%
+  select(location, latitude, longitude) %>%
+  arrange(location)
+
+school_coordinates <- haunted_places %>%
+  filter(grepl("school", location, ignore.case = TRUE)) %>%
+  select(location, latitude, longitude) %>%
+  arrange(location)
+
+university_coordinates <- haunted_places %>%
+  filter(grepl("university", location, ignore.case = TRUE)) %>%
+  select(location, latitude, longitude) %>%
+  arrange(location)
+
+# Print the result
+cemetery_coordinates
+school_coordinates
+university_coordinates
+
+```
+
+```{r}
+# Finding the location which have same latitude and longitude (without considering the NA values)
+
+same_coordinates <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+# Remove NA values
+same_coordinates <- same_coordinates %>%
+  filter(!is.na(latitude) & !is.na(longitude))
+
+same_coordinates
+
+# Create a frequency table for the location column
+same_coordinates_freq <- same_coordinates %>%
+  count(location, sort = TRUE)
+
+same_coordinates_freq
+```
+
+We can see that some of the latitudes and longitudes are same for different location (but they are not, it is just the typo.)
+
+```{r}
+# Identify locations with the same latitude and longitude but different names
+result <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
+  arrange(latitude, longitude)         # Arrange by latitude and longitude
+
+# Remove NA values
+result <- result %>%
+  filter(!is.na(latitude) & !is.na(longitude))
+
+# Print the result
+print(result)
+
+```
+Ok now we can see that some of the location names have some additional datas and typos and with different cases. Let's clean this.
+
+```{r}
+
+# Clean the location column
+# Replace locations with the longest name; if equal, use the first name
+updated_location_names <- result %>%
+  group_by(latitude, longitude) %>%
+  mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name or first in tie
+  ungroup()
+
+# Print the updated data frame
+updated_location_names
+```
+```{r}
+# Conforming it is working or not
+updated_location_names <- updated_location_names %>%
+  group_by(latitude, longitude) %>%
+  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
+  arrange(latitude, longitude)         # Arrange by latitude and longitude
+
+updated_location_names
+```
+
+Super it worked😍. Now we can see that the location names are cleaned.
+
+Now we can apply it for entire dataframe.
+
+```{r}
+haunted_places <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name or first in tie
+  ungroup()
+```
+
+
+Now Lets check the frequency of the location names.
+
+```{r}
+# Frequency table for location column removing NA values
+location_freq <- haunted_places %>%
+  filter(!is.na(location)) %>%
+  count(location, sort = TRUE)
+
+location_freq
+```
 
 
 
