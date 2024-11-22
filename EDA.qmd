@@ -12,8 +12,6 @@ Importing the required libraries
 ```{r}
 library(tidyverse)
 
-```
-```{r}
 # Importing the dataset
 tuesdata <- tidytuesdayR::tt_load('2023-10-10')
 haunted_places <- tuesdata$haunted_places
@@ -126,8 +124,12 @@ state_freq
 
 ```
 
+Create a Heatmap for city and the stae freq table.
+
 
 ```{r}
+# load wordcloud2
+library(wordcloud2) 
 
 # wordcloud for city column
 wordcloud2(city_freq, size = 0.7)
@@ -249,7 +251,7 @@ result <- result %>%
 print(result)
 
 ```
-Ok now we can see that some of the location names have some additional datas and typos and with different cases. Let's clean this.
+Ok now we can see that some of the location names have some additional data and typos and with different cases. Let's clean this. we have total of 638 rows of the cities with more that one common lat and long.
 
 ```{r}
 
@@ -263,6 +265,8 @@ updated_location_names <- result %>%
 # Print the updated data frame
 updated_location_names
 ```
+
+
 ```{r}
 # Conforming it is working or not
 updated_location_names <- updated_location_names %>%
@@ -273,16 +277,96 @@ updated_location_names <- updated_location_names %>%
 updated_location_names
 ```
 
-Super it worked😍. Now we can see that the location names are cleaned.
+Super. it worked😍. Now we can see that the location names are cleaned.
 
-Now we can apply it for entire dataframe.
+Now we can apply the same method for entire dataframe.
 
 ```{r}
-haunted_places <- haunted_places %>%
-  group_by(latitude, longitude) %>%
-  mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name or first in tie
-  ungroup()
+nrow(haunted_places)
 ```
+```{r}
+# Creating a function to clean the entire df
+standardize_locations <- function(df) {
+  # First, group by coordinates and find places with multiple names
+  standardized_df <- df %>%
+    # Group by coordinates
+    group_by(latitude, longitude) %>%
+    # If multiple records exist for same coordinates, use the shortest name
+    mutate(
+      standardized_location = if(n() > 1) {
+        location[which.min(nchar(location))]
+      } else {
+        location
+      }
+    ) %>%
+    ungroup() %>%
+    # Replace old location with standardized one
+    mutate(location = standardized_location) %>%
+    select(-standardized_location)  # Remove the temporary column
+  
+  return(standardized_df)
+}
+
+```
+
+Applying the function.
+```{r}
+# Apply the standardization to your dataset
+haunted_places <- standardize_locations(haunted_places)
+```
+
+
+
+
+
+
+
+
+check if it is working or not
+
+```{r}
+verification <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  filter(n_distinct(location) > 1, 
+         !is.na(latitude), 
+         !is.na(longitude)) %>%
+  arrange(latitude, longitude)
+
+nrow(verification)
+```
+
+
+
+
+```{r}
+# Identify locations with the same latitude and longitude but different names
+result <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
+  arrange(latitude, longitude)         # Arrange by latitude and longitude
+
+# Remove NA values
+result <- result %>%
+  filter(!is.na(latitude) & !is.na(longitude))
+
+# Print the result
+print(result)
+```
+
+Yeah it worked. Now we can see that the location names are cleaned.
+
+```{r}
+# Frequency table for location column without NA values
+location_freq <- haunted_places %>%
+  filter(!is.na(location)) %>%
+  count(location, sort = TRUE)
+
+location_freq
+```
+this is the true location frequency.
+
+
+
 
 
 Now Lets check the frequency of the location names.
@@ -295,6 +379,14 @@ location_freq <- haunted_places %>%
 
 location_freq
 ```
+
+count the number of unique latitude and longitude and create a frequency table for the same.
+```{r}
+# Count the number of unique latitude and longitude
+unique_coordinates <- haunted_places %>%
+  distinct(latitude, longitude)
+```
+
 
 
 
