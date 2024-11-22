@@ -52,17 +52,40 @@ Ohh, That's there political concern. Iam going to keep it as it is.
 
 ```{r}
 # Cleaning the dataset
-# Removing redundant columns
+# Removing redundant columns (Country, state_abbrev)
 haunted_places <- haunted_places %>%
-  select(city, description, location, state, state_abbrev, latitude, longitude, city_latitude, city_longitude)
+  select(city, description, location, state, latitude, longitude, city_latitude, city_longitude)
 ```
 
 ```{r}
-# Checking for missing values
-missing_values <- haunted_places %>%
-  summarise(across(everything(), ~ sum(is.na(.))))
-missing_values
+# Function for checking missing values
+missing_values <- function(df){
+  
+  df %>% summarise(across(everything(), ~ sum(is.na(.))))
+}
+missing_values(haunted_places)
 ```
+
+printing the rows with missing values in city_latitude and city_longitude columns.
+```{r}
+# Print rows with missing values in city_latitude and city_longitude columns
+missing_coordinates <- haunted_places %>%
+  filter(is.na(city_latitude) | is.na(city_longitude))
+missing_coordinates
+```
+```{r}
+result <- haunted_places[haunted_places$city == "Cockeysville", ]
+#result
+
+for (city in missing_coordinates$city) {
+  print(haunted_places[haunted_places$city == city, ])
+}
+
+```
+by doing the city search we can see that we can find the city latidude and longitude of these cities.
+Cockeysville, Faribault, Streamwood, Cynthiana
+Lets fix these city coordinates. (may be later)
+
 ```{r}
 # Dig deeper into the missing values
 # removing the rows with missing values in city, location, city_latitude, city_longitude columns
@@ -70,9 +93,7 @@ haunted_places <- haunted_places %>%
   filter(!is.na(city) & !is.na(location) & !is.na(city_latitude) & !is.na(city_longitude))
 
 # Checking for missing values
-missing_values <- haunted_places %>%
-  summarise(across(everything(), ~ sum(is.na(.))))
-missing_values
+missing_values(haunted_places)
 ```
 
 Check the Exact duplicate values in the dataset
@@ -124,7 +145,9 @@ state_freq
 
 ```
 
-Create a Heatmap for city and the stae freq table.
+Create a Heatmap for city and the state freq table.
+
+create a Circular Packing for state - city - location
 
 
 ```{r}
@@ -234,29 +257,47 @@ same_coordinates_freq <- same_coordinates %>%
 same_coordinates_freq
 ```
 
+Create a proportion table for it.
+```{r}
+# Create a proportion table for the location column
+same_coordinates_prop <- same_coordinates_freq %>%
+  mutate(proportion = n / 870)
+
+same_coordinates_prop
+```
+
+
+
 We can see that some of the latitudes and longitudes are same for different location (but they are not, it is just the typo.)
+```{r}
+# function to filter the duplicate data
+filter_duplicate_locations <- function(df) {
+  df %>%
+    group_by(latitude, longitude) %>%
+    filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
+    arrange(latitude, longitude)         # Arrange by latitude and longitude
+}
+```
 
 ```{r}
 # Identify locations with the same latitude and longitude but different names
-result <- haunted_places %>%
-  group_by(latitude, longitude) %>%
-  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
-  arrange(latitude, longitude)         # Arrange by latitude and longitude
+result <- filter_duplicate_locations(haunted_places)
 
 # Remove NA values
 result <- result %>%
   filter(!is.na(latitude) & !is.na(longitude))
 
 # Print the result
-print(result)
+result
 
 ```
 Ok now we can see that some of the location names have some additional data and typos and with different cases. Let's clean this. we have total of 638 rows of the cities with more that one common lat and long.
 
+
 ```{r}
 
 # Clean the location column
-# Replace locations with the longest name; if equal, use the first name
+# Replace locations with the shortest name; if equal, use the first name
 updated_location_names <- result %>%
   group_by(latitude, longitude) %>%
   mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name or first in tie
@@ -269,10 +310,7 @@ updated_location_names
 
 ```{r}
 # Conforming it is working or not
-updated_location_names <- updated_location_names %>%
-  group_by(latitude, longitude) %>%
-  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
-  arrange(latitude, longitude)         # Arrange by latitude and longitude
+updated_location_names <- filter_duplicate_locations(updated_location_names)
 
 updated_location_names
 ```
@@ -284,73 +322,30 @@ Now we can apply the same method for entire dataframe.
 ```{r}
 nrow(haunted_places)
 ```
-```{r}
-# Creating a function to clean the entire df
-standardize_locations <- function(df) {
-  # First, group by coordinates and find places with multiple names
-  standardized_df <- df %>%
-    # Group by coordinates
-    group_by(latitude, longitude) %>%
-    # If multiple records exist for same coordinates, use the shortest name
-    mutate(
-      standardized_location = if(n() > 1) {
-        location[which.min(nchar(location))]
-      } else {
-        location
-      }
-    ) %>%
-    ungroup() %>%
-    # Replace old location with standardized one
-    mutate(location = standardized_location) %>%
-    select(-standardized_location)  # Remove the temporary column
-  
-  return(standardized_df)
-}
-
-```
-
-Applying the function.
-```{r}
-# Apply the standardization to your dataset
-haunted_places <- standardize_locations(haunted_places)
-```
-
-
-
-
-
-
-
-
-check if it is working or not
+new claude
 
 ```{r}
-verification <- haunted_places %>%
+# Standardize location names only for non-NA coordinates
+haunted_places <- haunted_places %>%
+  group_by(latitude, longitude) %>%
+  mutate(
+    # Only standardize when coordinates are not NA
+    standardized_location = if(!any(is.na(latitude)) && !any(is.na(longitude))) {
+      names(which.max(table(location)))
+    } else {
+      location
+    }
+  ) %>%
+  ungroup() %>%
+  mutate(location = standardized_location) %>%
+  select(-standardized_location)
+
+# Verify the results
+haunted_places %>%
   group_by(latitude, longitude) %>%
   filter(n_distinct(location) > 1, 
          !is.na(latitude), 
-         !is.na(longitude)) %>%
-  arrange(latitude, longitude)
-
-nrow(verification)
-```
-
-
-
-
-```{r}
-# Identify locations with the same latitude and longitude but different names
-result <- haunted_places %>%
-  group_by(latitude, longitude) %>%
-  filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
-  arrange(latitude, longitude)         # Arrange by latitude and longitude
-
-# Remove NA values
-result <- result %>%
-  filter(!is.na(latitude) & !is.na(longitude))
-
-# Print the result
-print(result)
+         !is.na(longitude))
 ```
 
 Yeah it worked. Now we can see that the location names are cleaned.
@@ -365,27 +360,45 @@ location_freq
 ```
 this is the true location frequency.
 
-
-
-
-
-Now Lets check the frequency of the location names.
+these are the locations with multiple ghost siteings. lets plot it on the map.
 
 ```{r}
-# Frequency table for location column removing NA values
-location_freq <- haunted_places %>%
-  filter(!is.na(location)) %>%
-  count(location, sort = TRUE)
+# Group by latitude, longitude, and location, then count occurrences
+same_coordinates_freq <- haunted_places %>%
+  group_by(latitude, longitude, location) %>%
+  summarise(count = n(), .groups = "drop") %>%  # Count occurrences and drop grouping
+  arrange(desc(count)) %>%  # Sort by count in descending order
+  filter(!is.na(latitude) & !is.na(longitude))  # Remove NA values
 
-location_freq
+# View the updated frequency table
+same_coordinates_freq
 ```
 
-count the number of unique latitude and longitude and create a frequency table for the same.
+get top 25 places with multiple haunted citing.
 ```{r}
-# Count the number of unique latitude and longitude
-unique_coordinates <- haunted_places %>%
-  distinct(latitude, longitude)
+top_50_places <- same_coordinates_freq[1:50,]
 ```
+
+
+```{r}
+# Create the leaflet map of top 50 places with multiple haunted sightings
+# Show a CUSTOM circle at each position. Size defined in Pixel. Size does not change when you zoom
+m=leaflet(data = top_50_places) %>%
+   addTiles() %>%
+   addCircleMarkers(
+      ~longitude, ~latitude, 
+      radius=~count*1 , 
+      color=~ifelse(top_50_places$count>10 , "red", "orange"),
+      stroke = TRUE, 
+      fillOpacity = 0.1,
+      popup = ~as.character(location)
+   ) 
+m
+```
+
+
+
+
 
 
 
