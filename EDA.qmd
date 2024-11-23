@@ -187,32 +187,6 @@ webshot("tmp.html","fig_1.pdf", delay =5, vwidth = 480, vheight=480)
 ```
 
 ```{r}
-# Expirementation with leaflet
-library(leaflet)
-# Create 20 markers (Random points)
-data = data.frame(
-   long=sample(seq(-150,150),20),
-   lat=sample(seq(-50,50),20),
-   val=round(rnorm(20),2),
-   name=paste("point",letters[1:20],sep="_")
-) 
- 
-# Show a CUSTOM circle at each position. Size defined in Pixel. Size does not change when you zoom
-m=leaflet(data = data) %>%
-   addTiles() %>%
-   addCircleMarkers(
-      ~long, ~lat, 
-      radius=~val*14 , 
-      color=~ifelse(data$val>0 , "red", "orange"),
-      stroke = TRUE, 
-      fillOpacity = 0.2,
-      popup = ~as.character(name)
-   ) 
-m
-```
-
-
-```{r}
 # Filter rows where 'location' contains "Cemetery"
 cemetery_coordinates <- haunted_places %>%
   filter(grepl("cemetery", location, ignore.case = TRUE)) %>%
