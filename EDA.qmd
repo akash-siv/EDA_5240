@@ -8,9 +8,16 @@ format: html
 # Dataset used:
 # Team Members: Akash Sivasubramanian - 0862944
 
+
 Importing the required libraries
 ```{r}
 library(tidyverse)
+library(leaflet)
+library(wordcloud2)
+library(webshot)
+webshot::install_phantomjs()
+library("htmlwidgets")
+library(knitr)
 
 # Importing the dataset
 tuesdata <- tidytuesdayR::tt_load('2023-10-10')
@@ -152,38 +159,35 @@ create a Circular Packing for state - city - location
 
 ```{r}
 # load wordcloud2
-library(wordcloud2) 
+
 
 # wordcloud for city column
-wordcloud2(city_freq, size = 0.7)
+city_cloud <- wordcloud2(city_freq, size = 0.5)
+city_cloud
 
 # wordcloud for location column
-wordcloud2(location_freq, size = 0.7)
+location_cloud <- wordcloud2(location_freq, size = 0.5)
+location_cloud
 
 # wordcloud for state column
-wordcloud2(state_freq, size = 0.7)
+state_cloud <- wordcloud2(state_freq, size = 0.8)
+state_cloud
 
 ```
 
 
 ```{r}
 # Converting the the wordcloud into image
-# load wordcloud2
-library(wordcloud2) 
-
-# install webshot
-library(webshot)
-webshot::install_phantomjs()
-
-# Make the graph
-my_graph <- wordcloud2(demoFreq, size=1.5)
 
 # save it in html
-library("htmlwidgets")
-saveWidget(my_graph,"tmp.html",selfcontained = F)
+saveWidget(city_cloud,"tmp_city.html",selfcontained = F)
+saveWidget(state_cloud,"tmp_state.html",selfcontained = F)
+saveWidget(location_cloud,"tmp_location.html",selfcontained = F)
 
 # and in png or pdf
-webshot("tmp.html","fig_1.pdf", delay =5, vwidth = 480, vheight=480)
+webshot("tmp_city.html","city_cloud.png", delay =5)
+webshot("tmp_state.html","state_cloud.png", delay =5)
+webshot("tmp_location.html","location_cloud.png", delay =5)
 ```
 
 ```{r}
@@ -238,6 +242,8 @@ same_coordinates_prop <- same_coordinates_freq %>%
   mutate(proportion = n / 870)
 
 same_coordinates_prop
+
+kable(same_coordinates_prop, caption = "Frequency and Proportional Table", col.names = c("Location", "Counts", "Proportions"))
 ```
 
 
@@ -357,6 +363,7 @@ top_50_places <- same_coordinates_freq[1:50,]
 ```{r}
 # Create the leaflet map of top 50 places with multiple haunted sightings
 # Show a CUSTOM circle at each position. Size defined in Pixel. Size does not change when you zoom
+
 m=leaflet(data = top_50_places) %>%
    addTiles() %>%
    addCircleMarkers(
@@ -369,6 +376,34 @@ m=leaflet(data = top_50_places) %>%
    ) 
 m
 ```
+```{r}
+# Converting the the leaflet map into image
+
+# save it in html
+saveWidget(m,"tmp_top_50.html",selfcontained = F)
+
+
+# and in png or pdf
+webshot("tmp_top_50.html","top_50_map.png", delay =5, vwidth = 3840,
+  vheight = 2160)
+
+```
+
+
+```{r}
+# save the haunted places data as a csv file
+write_csv(haunted_places, "haunted_places.csv")
+```
+
+# Modelling
+
+
+We can analyze if there's a relationship between distance from city center and the concentration of haunted places.
+we can create a multilinear regression model to predict the number of haunted places in a city based on the distance from the city center.
+
+
+
+
 
 
 
