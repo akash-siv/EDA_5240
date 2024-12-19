@@ -1,70 +1,117 @@
 ---
 title: "EDA Proposal"
 author: "Akash Sivasubramanian - 0862944"
-format: html
+format: pdf
+execute:
+  echo: false
 ---
 
-# Project Title :
-# Dataset used:
-# Team Members: Akash Sivasubramanian - 0862944
 
 
 Importing the required libraries
 ```{r}
+#| label: importing libraries
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+
 library(tidyverse)
 library(leaflet)
 library(wordcloud2)
 library(webshot)
-webshot::install_phantomjs()
 library("htmlwidgets")
 library(knitr)
+webshot::install_phantomjs()
+```
 
+```{r}
+#| label: importing dataset
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+ 
 # Importing the dataset
 tuesdata <- tidytuesdayR::tt_load('2023-10-10')
 haunted_places <- tuesdata$haunted_places
 
-# Glimpse of the dataset
-haunted_places %>% glimpse()
-head(haunted_places)
 ```
 ```{r}
+#| label: Glimpse of the dataset
+#| echo: false
+# Glimpse of the dataset
+haunted_places %>% glimpse()
+```
+
+
+```{r}
+#| label: Finding Unique values
+#| include: false
+#| 
+
 # Counting unique values in each column
 column_summary <- haunted_places %>%
   summarise(across(everything(), ~ n_distinct(.)))
 column_summary
+
 ```
 Wow there are 9904 unique locations in 4386 unique cities across usa. This is interesting.
 Hmm things going weired because there are only 50 states in the US but we have 51 unique values in the state column. Let's dig deeper into this.
 
 ```{r}
+#| label: Analysing the unique values in the state column
+#| include: false
+
 # Get unique values in the state column in alphabetical order.
 unique_states <- haunted_places %>%
   distinct(state) %>%
   arrange(state)
 
 unique_states
+
+# Gottcha there is a value 'Washington D.C.' which is not a state
+# but a federal district. Let's correct this.
+# we can dig deeper into the dataset to find out the 
+# haunted places in Washington D.C.
 ```
-Gottcha there is a value 'Washington D.C.' which is not a state but a federal district. Let's correct this.
-we can dig deeper into the dataset to find out the haunted places in Washington D.C.
+
 
 ```{r}
+#| label: Haunted places in Washington D.C.
+#| include: false
+
 # Haunted places in Washington D.C.
 haunted_places_dc <- haunted_places %>%
   filter(state == "Washington DC")
 haunted_places_dc
+
+# OK Ok. I think there is lot going on in the Us.
+# "After some web search I found that the Wasington DC is a separate entity 
+# from the US but overseen by US"
+# Ohh, That's there political concern. Iam going to keep it as it is.
 ```
-OK Ok. I think there is lot going on in the Us.
-"After some web search I found that the Wasington DC is a separate entity from the US but overseen by US"
-Ohh, That's there political concern. Iam going to keep it as it is.
+
 
 ```{r}
+#| label: Removing Unwanted columns
+
 # Cleaning the dataset
 # Removing redundant columns (Country, state_abbrev)
 haunted_places <- haunted_places %>%
-  select(city, description, location, state, latitude, longitude, city_latitude, city_longitude)
+  select(city, 
+         description, 
+         location, 
+         state, 
+         latitude, 
+         longitude, 
+         city_latitude, 
+         city_longitude)
 ```
 
 ```{r}
+#| label: Checking for missing values
+
 # Function for checking missing values
 missing_values <- function(df){
   
@@ -75,38 +122,50 @@ missing_values(haunted_places)
 
 printing the rows with missing values in city_latitude and city_longitude columns.
 ```{r}
+#| label: finding the missing values city lat and long
+#| include: false
 # Print rows with missing values in city_latitude and city_longitude columns
 missing_coordinates <- haunted_places %>%
   filter(is.na(city_latitude) | is.na(city_longitude))
 missing_coordinates
 ```
+
 ```{r}
-result <- haunted_places[haunted_places$city == "Cockeysville", ]
-#result
+#| label: imputing the missing values
+#| include: false
 
 for (city in missing_coordinates$city) {
   print(haunted_places[haunted_places$city == city, ])
 }
 
+# by doing the city search we can see that we can find the city latitude and 
+# longitude of these cities.
+# Cockeysville, Faribault, Streamwood, Cynthiana
+# Lets fix these city coordinates. (may be later)
 ```
-by doing the city search we can see that we can find the city latidude and longitude of these cities.
-Cockeysville, Faribault, Streamwood, Cynthiana
-Lets fix these city coordinates. (may be later)
 
 ```{r}
+#| label: Removing NA in city, location, city_latitude, city_longitude columns
+#| include: false
+
 # Dig deeper into the missing values
-# removing the rows with missing values in city, location, city_latitude, city_longitude columns
+# removing the rows with missing values in city, location, 
+# city_latitude, city_longitude columns
 haunted_places <- haunted_places %>%
-  filter(!is.na(city) & !is.na(location) & !is.na(city_latitude) & !is.na(city_longitude))
+  filter(!is.na(city) & 
+           !is.na(location) & 
+           !is.na(city_latitude) & 
+           !is.na(city_longitude))
 
 # Checking for missing values
 missing_values(haunted_places)
 ```
 
-Check the Exact duplicate values in the dataset
 
 ```{r}
-
+#| label: Removing the Exact duplicate values
+#| include: false
+ 
 # Before removing the duplicates
 nrow(haunted_places)
 
@@ -131,34 +190,44 @@ nrow(haunted_places)
 
 creating a frequency table for the city ,location and state columns
 ```{r}
+#| label: Frequency and Proportion table for city column
+#| tbl-cap: "A table of City Frequency and Proportion"
+
+
 # Frequency table for city column
 city_freq <- haunted_places %>%
   count(city, sort = TRUE)
 
-city_freq
+# Create a proportion table for the location column
+city_prop <- city_freq %>%
+  mutate(proportion = n / 4362)
 
-# Frequency table for location column
-location_freq <- haunted_places %>%
-  count(location, sort = TRUE)
+kable(city_prop[1:5,], caption = "Frequency and Proportional Table of City", 
+      col.names = c("City", "Counts", "Proportions"))
 
-location_freq
+```
+```{r}
+#| label: Frequency and Proportion table for State column
+#| tbl-cap: "A table of State Frequency and Proportion"
+
 
 # Frequency table for state column
 state_freq <- haunted_places %>%
   count(state, sort = TRUE)
 
-state_freq
+# Create a proportion table for the location column
+city_prop <- state_freq %>%
+  mutate(proportion = n / 51)
 
-
+kable(city_prop[1:5,], caption = "Freq and Prop Table of City", 
+      col.names = c("State", "Counts", "Proportions"))
 ```
 
-Create a Heatmap for city and the state freq table.
-
-create a Circular Packing for state - city - location
 
 
 ```{r}
-# load wordcloud2
+#| label: World Cloud
+#| eval: false
 
 
 # wordcloud for city column
@@ -177,8 +246,10 @@ state_cloud
 
 
 ```{r}
+#| label: Converting the wordcloud into image
+#| eval: false
+ 
 # Converting the the wordcloud into image
-
 # save it in html
 saveWidget(city_cloud,"tmp_city.html",selfcontained = F)
 saveWidget(state_cloud,"tmp_state.html",selfcontained = F)
@@ -191,6 +262,9 @@ webshot("tmp_location.html","location_cloud.png", delay =5)
 ```
 
 ```{r}
+#| label: Finding the haunted places in the cemeteries, schools and universities
+#| include: false
+
 # Filter rows where 'location' contains "Cemetery"
 cemetery_coordinates <- haunted_places %>%
   filter(grepl("cemetery", location, ignore.case = TRUE)) %>%
@@ -212,10 +286,18 @@ cemetery_coordinates
 school_coordinates
 university_coordinates
 
+# We find some intersting finding in the dataset
+# That is there are 748 Cementry citing but there are 
+# 1210 Haunted citing in School.
+# Creepy
 ```
 
 ```{r}
-# Finding the location which have same latitude and longitude (without considering the NA values)
+#| label: Exploring Location names
+#| include: false
+
+# Finding the location which have same latitude and longitude 
+# (without considering the NA values)
 
 same_coordinates <- haunted_places %>%
   group_by(latitude, longitude) %>%
@@ -237,29 +319,38 @@ same_coordinates_freq
 
 Create a proportion table for it.
 ```{r}
+#| label: Frequency and Proportion table for the location column
+#| include: false
 # Create a proportion table for the location column
 same_coordinates_prop <- same_coordinates_freq %>%
   mutate(proportion = n / 870)
 
 same_coordinates_prop
 
-kable(same_coordinates_prop, caption = "Frequency and Proportional Table", col.names = c("Location", "Counts", "Proportions"))
+
 ```
 
 
 
-We can see that some of the latitudes and longitudes are same for different location (but they are not, it is just the typo.)
+
 ```{r}
+#| label: Cleaning the location names
+# We can see that some of the latitudes and longitudes are same for different 
+# location (but they are not, it is just the typo.)
+
 # function to filter the duplicate data
 filter_duplicate_locations <- function(df) {
   df %>%
     group_by(latitude, longitude) %>%
-    filter(n_distinct(location) > 1) %>%  # Keep groups with more than one distinct location name
+    filter(n_distinct(location) > 1) %>%  
     arrange(latitude, longitude)         # Arrange by latitude and longitude
 }
+
 ```
 
 ```{r}
+#| label: Cleaning the location names 2
+#| include: false
 # Identify locations with the same latitude and longitude but different names
 result <- filter_duplicate_locations(haunted_places)
 
@@ -275,12 +366,14 @@ Ok now we can see that some of the location names have some additional data and 
 
 
 ```{r}
+#| label: Cleaning the location names 3
+#| include: false
 
 # Clean the location column
 # Replace locations with the shortest name; if equal, use the first name
 updated_location_names <- result %>%
   group_by(latitude, longitude) %>%
-  mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name or first in tie
+  mutate(location = location[which.min(nchar(location))]) %>%  # Shortest name
   ungroup()
 
 # Print the updated data frame
@@ -289,6 +382,8 @@ updated_location_names
 
 
 ```{r}
+#| label: Checking the cleaned location names
+#| include: false
 # Conforming it is working or not
 updated_location_names <- filter_duplicate_locations(updated_location_names)
 
@@ -299,18 +394,21 @@ Super. it worked😍. Now we can see that the location names are cleaned.
 
 Now we can apply the same method for entire dataframe.
 
-```{r}
-nrow(haunted_places)
-```
-new claude
+
+
 
 ```{r}
+#| label: Applying the cleaning method for entire dataset
+#| include: false
+ 
+nrow(haunted_places)
 # Standardize location names only for non-NA coordinates
 haunted_places <- haunted_places %>%
   group_by(latitude, longitude) %>%
   mutate(
     # Only standardize when coordinates are not NA
-    standardized_location = if(!any(is.na(latitude)) && !any(is.na(longitude))) {
+    standardized_location = if(!any(is.na(latitude)) && 
+                               !any(is.na(longitude))) {
       names(which.max(table(location)))
     } else {
       location
@@ -331,22 +429,29 @@ haunted_places %>%
 Yeah it worked. Now we can see that the location names are cleaned.
 
 ```{r}
+#| label: Frequency table for location column without NA values
+#| tbl-cap: "A table of Location with multiple citing" 
 # Frequency table for location column without NA values
 location_freq <- haunted_places %>%
   filter(!is.na(location)) %>%
   count(location, sort = TRUE)
 
-location_freq
+
+kable(location_freq[1:5,], 
+      caption = "Frequency and Proportional Table", 
+      col.names = c("Location", "Counts"))
 ```
 this is the true location frequency.
 
-these are the locations with multiple ghost siteings. lets plot it on the map.
+these are the locations with multiple ghost citings. lets plot it on the map.
 
 ```{r}
+#| label: Argrregating the location with same latitude and longitude
+#| include: false
 # Group by latitude, longitude, and location, then count occurrences
 same_coordinates_freq <- haunted_places %>%
   group_by(latitude, longitude, location) %>%
-  summarise(count = n(), .groups = "drop") %>%  # Count occurrences and drop grouping
+  summarise(count = n(), .groups = "drop") %>%  # drop grouping
   arrange(desc(count)) %>%  # Sort by count in descending order
   filter(!is.na(latitude) & !is.na(longitude))  # Remove NA values
 
@@ -356,13 +461,17 @@ same_coordinates_freq
 
 get top 25 places with multiple haunted citing.
 ```{r}
+#| label: Top 50 places with multiple haunted sightings
 top_50_places <- same_coordinates_freq[1:50,]
 ```
 
 
 ```{r}
+#| label: Create the leaflet map of top 50 places with multiple haunted sighting
+#| include: false
 # Create the leaflet map of top 50 places with multiple haunted sightings
-# Show a CUSTOM circle at each position. Size defined in Pixel. Size does not change when you zoom
+# Show a CUSTOM circle at each position. Size defined in Pixel. 
+# Size does not change when you zoom
 
 m=leaflet(data = top_50_places) %>%
    addTiles() %>%
@@ -376,7 +485,10 @@ m=leaflet(data = top_50_places) %>%
    ) 
 m
 ```
+
 ```{r}
+#| label: Converting the leaflet map into image (png)
+#| eval: false
 # Converting the the leaflet map into image
 
 # save it in html
@@ -391,6 +503,8 @@ webshot("tmp_top_50.html","top_50_map.png", delay =5, vwidth = 3840,
 
 
 ```{r}
+#| label: Saving the cleaned dataset
+#| eval: false
 # save the haunted places data as a csv file
 write_csv(haunted_places, "haunted_places.csv")
 ```
@@ -400,6 +514,268 @@ write_csv(haunted_places, "haunted_places.csv")
 
 We can analyze if there's a relationship between distance from city center and the concentration of haunted places.
 we can create a multilinear regression model to predict the number of haunted places in a city based on the distance from the city center.
+
+
+### State Distribution
+
+![Choropleth Map of states](Choropleth_Map_of_states.jpg){width=550px height=300px}
+
+### Bubble map of top 50 haunted places
+
+![Bubble Map](top_50_location.png){width=500px height=300px}
+
+
+### Word Cloud of the cities
+
+![Word Cloud of Cities](city_cloud.png){width=500px height=300px}
+
+### Bar plot of Top 20 hauntred siting in cities
+
+![Bar plot of Top 20 hauntred siting in cities](Top_20_cities.png){width=500px height=300px}
+
+
+Null Hypothesis $H_0$ : proportion of simulation rejections found
+using the CLT based approach was equal to 10%.
+$$H_0 : p= \text{Time in Bed (TIB)}$$
+
+Alternative Hypotheses $H_A$ : proportion of simulation rejections found
+using the CLT based approach was different from 10%.
+$$H_1 : p\neq\text{Time in Bed (TIB)}$$
+
+
+```{r}
+#| label: Hypothesis testing preprocessing
+# test hypothesis
+# Extract location type from 'location' column (if location types are embedded in text)
+# Location Type Classification using reggex
+haunted_places_hypo <- haunted_places %>%
+  mutate(
+    location_type = case_when(
+      grepl("cemetery|graveyard|burial", location, ignore.case = TRUE) ~ "Cemetery",
+      grepl("university|college|school|campus", location, ignore.case = TRUE) ~ "University",
+      grepl("hospital|medical|clinic|asylum", location, ignore.case = TRUE) ~ "Hospital"
+    )
+  ) %>%
+  # Remove NA values
+  filter(!is.na(location_type), !is.na(state))
+
+
+# contingency table
+contingency_table <- table(haunted_places_hypo$location_type, haunted_places_hypo$state)
+
+```
+
+
+```{r}
+#| label: chi-square test
+# Chi-Square Test of Independence
+chi_test <- chisq.test(contingency_table)
+
+# print the result
+chi_test
+```
+
+
+```{r}
+#| label: Visualizing contengency table
+# Visualize the contingency table 
+library(ggplot2)
+contingency_df <- as.data.frame(contingency_table)
+colnames(contingency_df) <- c("Location_Type", "State", "Count")
+
+plot <- ggplot(contingency_df, aes(x = State, y = Count, fill = Location_Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution of Location Types by State",
+       x = "State", y = "Count", fill = "Location Type") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+plot
+
+ggsave("location_distribution_by_state.png", plot = plot, width = 10, height = 6, dpi = 300)
+```
+
+
+
+```{r}
+#| label: function for Haversine distance formula
+# Function to calculate Haversine distance
+haversine_distance <- function(lat1, lon1, lat2, lon2, radius = 6371) {
+  # Convert degrees to radians
+  to_radians <- function(deg) { deg * pi / 180 }
+  
+  lat1 <- to_radians(lat1)
+  lon1 <- to_radians(lon1)
+  lat2 <- to_radians(lat2)
+  lon2 <- to_radians(lon2)
+  
+  # Haversine formula
+  delta_lat <- lat2 - lat1
+  delta_lon <- lon2 - lon1
+  a <- sin(delta_lat / 2)^2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2)^2
+  c <- 2 * atan2(sqrt(a), sqrt(1 - a))
+  
+  # Distance in kilometers
+  radius * c
+  
+}
+
+```
+
+
+
+```{r}
+#| label: Remove unwanted columns
+# Remove 'description' column and filter out rows with NA values
+haunted_places <- haunted_places %>%
+  select(-description) %>%  # Remove the 'description' column
+  drop_na()                 # Remove rows with NA values
+
+haunted_places
+```
+
+```{r}
+#| label: Applying Haversine distance formula
+# Calculate the distance and add as a new column
+haunted_places <- haunted_places %>%
+  rowwise() %>%
+  mutate(
+    distance_from_city = haversine_distance(
+      latitude, longitude, city_latitude, city_longitude
+    )
+  ) %>%
+  ungroup()
+```
+
+```{r}
+#| label: glimpse after calculating distance
+haunted_places %>% glimpse()
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#| label: Ploting Haversine distance
+
+# Calculate distance from city center using Haversine formula
+center_distance <- haunted_places %>%
+  mutate(distance_from_center = haversine_distance(
+    latitude, longitude,
+    city_latitude, city_longitude
+  ))
+
+# Aggregate data by city
+city_data <- center_distance %>%
+  group_by(city) %>%
+  summarize(
+    total_haunted = n(),
+    avg_distance = mean(distance_from_center, na.rm = TRUE)
+  )
+
+# Visualization with improved aesthetics
+ggplot(city_data, aes(x = avg_distance, y = total_haunted)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(method = "lm", color = "blue", se = TRUE) +  # Added confidence interval
+  labs(
+    title = "Total Haunted Locations vs Distance from City Center",
+    subtitle = "Using Haversine Distance Formula",
+    x = "Average Distance from City Center (km)",
+    y = "Total Number of Haunted Locations"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "gray40")
+  )
+
+```
+
+
+
+```{r}
+#| label: Linear Reggression Preprocessing
+
+# First calculate the Haversine distances
+center_distance <- haunted_places %>%
+  mutate(distance_from_center = haversine_distance(
+    latitude, longitude,
+    city_latitude, city_longitude
+  ))
+
+# Create 2km bins and count haunted places in each bin
+binned_data <- center_distance %>%
+  mutate(
+    # Create bins of 2km each
+    distance_bin = cut(
+      distance_from_center, 
+      breaks = seq(0, max(distance_from_center) + 2, by = 2),
+      labels = seq(1, ceiling(max(distance_from_center)/2)) * 2 - 1  # Center points of bins
+    )
+  ) %>%
+  group_by(distance_bin) %>%
+  summarize(
+    total_haunted = n(),
+    avg_distance = as.numeric(as.character(distance_bin))  # Convert bin labels to numeric
+  )
+
+
+```
+
+```{r}
+#| label: Fitting the model
+# Creating the model
+# Linear regression model with binned data
+bin_model <- lm(total_haunted ~ avg_distance, data = binned_data)
+
+# Summary of the model
+summary(bin_model)
+
+# Visualization of binned data
+ggplot(binned_data, aes(x = avg_distance, y = total_haunted)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_smooth(method = "lm", color = "lightblue", se = TRUE) +
+  labs(
+    title = "Regression: Haunted Locations Count vs Distance from City Center",
+    subtitle = "Using 2km Distance Bins",
+    x = "Distance from City Center (km)",
+    y = "Number of Haunted Locations"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "gray40")
+  )
+
+# Diagnostic plots
+par(mfrow = c(2, 2))
+plot(bin_model)
+```
+
+
+
+
+
+
+
+
+
+\newpage
+# Enrire Code
+```{r}
+#| label: Entire Code
+#| echo: true
+#| eval: false
+#| ref.label: !expr knitr::all_labels()
+```
+
+
 
 
 

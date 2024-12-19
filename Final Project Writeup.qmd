@@ -1,0 +1,124 @@
+---
+title: "Final Project Writeup"
+authors: "Akash Sivasubramanian, Manodhya Opallage, Poojitha Gedipudi, Rupa Raman"
+format: pdf
+bibliography: references.bib
+execute:
+  echo: false
+---
+
+
+## **Introduction**  
+The United States is rich with folklore and ghost stories, many of which are tied to specific locations that have gained notoriety for their reported paranormal activity. From cemeteries and schools to historic inns, these haunted places reflect cultural, historical, and social narratives that intrigue both researchers and enthusiasts. This project explores a comprehensive dataset of haunted places across the United States, compiled by Tim Renner using *The Shadowlands Haunted Places Index*.  
+
+The primary goal of this analysis is to uncover geographical and thematic patterns in haunted locations while addressing questions such as:  
+1. Which states and cities report the highest concentration of haunted places?  
+2. Are there particular types of locations (e.g., cemeteries, schools) that are more frequently reported as haunted?  
+3. How do these trends vary across states or cities?  
+
+By analyzing this dataset, we aim to identify trends and patterns that might provide insight into the cultural significance of haunted sites. This exploration will include cleaning the dataset, visualizing key findings, and conducting statistical analyses to test hypotheses.  
+
+\newpage
+## **Background**  
+
+The analysis of paranormal activity, particularly haunted locations, has been a subject of curiosity and cultural significance for decades. Reports of hauntings, ghost sightings, and unexplained occurrences are often tied to historical landmarks, cemeteries, and abandoned places, reflecting a deep connection between folklore and geography. The dataset utilized for this project, sourced from the TidyTuesday repository, contains 10,958 observations of haunted places across cities in the United States. This dataset provides key features such as location descriptions, state, and geographic coordinates (latitude and longitude), offering an opportunity to explore spatial and thematic trends in paranormal phenomena.  
+
+Previous studies, such as Colin Dickey’s Ghostland: An American History in Haunted Places (2016), examine the cultural and historical relevance of haunted sites, shedding light on how such locations are embedded in local narratives. Similarly, Suzuki et al. (2023) conducted a quantitative analysis of haunted sites, revealing clustering patterns and correlations between hauntings and regional characteristics. These works highlight the importance of understanding spatial distributions and patterns in paranormal data, which aligns closely with our objectives in this project.  
+
+To prepare for this analysis, it was essential to understand the geographical context of the data. For instance, the dataset included 51 states, prompting an investigation into Washington D.C.’s status as a federal district rather than a U.S. state. Additionally, handling missing or inconsistent location data, such as city latitude and longitude, required cleaning and standardization to ensure accuracy. Key concepts such as geographic clustering, coordinate-based mapping, and categorical relationships between location types and states informed our analysis methods.  
+
+This background provides a foundation for examining paranormal trends across the United States, combining historical context with modern data analysis techniques. By leveraging visualization tools and statistical tests, we aim to uncover geographic patterns and thematic insights into haunted locations, contributing
+
+
+\newpage
+## **Data Section**  
+
+### **Data Source and Collection**  
+The dataset, sourced from *The Shadowlands Haunted Places Index*, was compiled by Tim Renner and made publicly available on [data.world](https://data.world). It can be accessed directly through the **tidytuesdayR** package or via GitHub. The data covers 10,958 entries documenting haunted locations across various cities and states in the United States.  
+
+### **Data Structure**  
+The dataset includes the following 10 variables:  
+- **city**: Name of the city where the haunted place is located.  
+- **state**: U.S. state where the haunted site is located.  
+- **location**: Specific haunted place (e.g., cemetery, school).  
+- **description**: Textual descriptions of paranormal activity at each location.  
+- **latitude** and **longitude**: Geographic coordinates for the location.  
+- **city_latitude** and **city_longitude**: Approximate coordinates for the city.  
+- **state_abbrev**: Abbreviated state names.  
+- **country**: The United States (all entries).  
+
+After cleaning, the dataset was reduced to the following structure:  
+- **Rows**: 10,992 unique entries  
+- **Columns**: 8 key variables (columns like `state_abbrev` and `country` were removed).  
+
+### **Data Cleaning and Preprocessing**  
+Several steps were undertaken to ensure the dataset was ready for analysis:  
+1. **Missing Values**:  
+   - Missing `city_latitude` and `city_longitude` values were addressed for cities like *Cockeyville*, *Faribault*, and others.  
+   - Rows with missing key columns (`city`, `location`, `latitude`, and `longitude`) were removed.  
+
+2. **Duplicate Removal**:  
+   - Exact duplicate rows were identified and removed.  
+   - Locations with identical geographic coordinates but differing names were standardized to their shortest versions.  
+
+3. **Data Quality**:  
+   - Identified an anomaly where **Washington D.C.** appeared as a separate entity (not a U.S. state). This was retained as it reflects real-world geopolitical status.  
+
+### **Data Context**  
+While the dataset is comprehensive, limitations include:  
+- **Bias**: Data may underrepresent haunted places in less-documented regions or overrepresent urban areas.  
+- **Subjectivity**: Reports of paranormal activity are inherently anecdotal and lack empirical validation.  
+- **Assumptions**: The analysis assumes that latitude and longitude coordinates are accurate despite minor inconsistencies.  
+
+\newpage
+## **Exploratory Data Analysis (EDA)**  
+
+### **Summary of Previous EDA**  
+The EDA revealed several key findings:  
+1. **State and City Frequencies**:  
+   - **California** reports the highest number of haunted places (20.92%), followed by Texas (13.64%) and Pennsylvania (12.71%).  
+   - At the city level, **Los Angeles** has the most haunted sites, with 61 locations reported.  
+
+2. **Duplicate Locations**:  
+   - Analysis uncovered 638 rows with shared geographic coordinates but differing location names. These were standardized.  
+
+3. **Haunted Location Types**:  
+   - Cemeteries, schools, and bridges were frequently cited, with **schools** having 1,210 entries—surprisingly higher than cemeteries (748).  
+
+### **Additional Insights**  
+To explore broader trends, visualizations were created to highlight:  
+- **State Distributions**: A choropleth map showcased states with higher haunted densities. California emerged as a significant paranormal hub.  
+- **Top Haunted Cities**: A bar plot of the top 20 cities identified key urban centers with concentrated paranormal activity.  
+
+### **Visualizations**  
+1. **Word Cloud**: A word cloud of city names emphasized the frequency of haunted places in urban areas.  
+
+![Word Cloud of Cities](city_cloud.png){width=500px height=300px}
+
+A word cloud was generated to represent the frequency of haunted places across cities. Larger words indicate cities with more haunted places. This visual immediately highlighted cities like Los Angeles, San Antonio, and Honolulu as key hubs of paranormal activity.
+
+2. **State Choropleth Map**: This map provided a macro-level view of haunted location densities across the U.S.  
+
+![Choropleth Map of states](Choropleth_Map_of_states.jpg){width=600px height=300px}
+
+To examine geographical clustering, a choropleth map was created. This visualization demonstrated which states had the most haunted locations, with darker shades indicating higher frequencies. California, Texas, and Pennsylvania emerged as paranormal hotspots.
+
+3. **Bubble Map**: A bubble map of the top 25 haunted locations revealed specific sites with recurring paranormal reports.
+
+![Bubble Map](top_50_location.png){width=500px height=300px}
+
+A horizontal bar plot showcased the 20 cities with the highest number of haunted locations. This provided a clear ranking and visualized how the number of haunted places varied among urban centers.
+
+
+
+### **Impact on Methodology**  
+
+The EDA informed key areas for further analysis, such as:  
+- Testing associations between location types (e.g., schools vs. cemeteries) and states using a **Chi-Squared test**.  
+- Exploring the relationship between haunted place frequencies and geographic proximity to city centers using **regression analysis**.  
+
+\newpage
+## Bibliography:
+
+@dickey2016ghostland
+@SUZUKI2023100701
