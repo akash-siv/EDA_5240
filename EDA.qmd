@@ -663,6 +663,7 @@ haunted_places %>% glimpse()
 
 ```{r}
 #| label: Ploting Haversine distance
+#| warning: false
 
 # Calculate distance from city center using Haversine formula
 center_distance <- haunted_places %>%
@@ -679,8 +680,8 @@ city_data <- center_distance %>%
     avg_distance = mean(distance_from_center, na.rm = TRUE)
   )
 
-# Visualization with improved aesthetics
-ggplot(city_data, aes(x = avg_distance, y = total_haunted)) +
+# Visualization 
+distance_plot <- ggplot(city_data, aes(x = avg_distance, y = total_haunted)) +
   geom_point(alpha = 0.7) +
   # geom_smooth(method = "lm", color = "blue", se = TRUE) +  # Added confidence interval
   labs(
@@ -694,6 +695,9 @@ ggplot(city_data, aes(x = avg_distance, y = total_haunted)) +
     plot.title = element_text(face = "bold"),
     plot.subtitle = element_text(color = "gray40")
   )
+distance_plot
+
+ggsave("distance_plot.png", plot = distance_plot, width = 10, height = 6, dpi = 300)
 
 ```
 
@@ -701,6 +705,7 @@ ggplot(city_data, aes(x = avg_distance, y = total_haunted)) +
 
 ```{r}
 #| label: Linear Reggression Preprocessing
+#| warning: false
 
 # First calculate the Haversine distances
 center_distance <- haunted_places %>%
@@ -754,12 +759,152 @@ ggplot(binned_data, aes(x = avg_distance, y = total_haunted)) +
   )
 
 # Diagnostic plots
+png("diagnostic_plots.png", width = 800, height = 800)
 par(mfrow = c(2, 2))
 plot(bin_model)
 ```
 
 
+## Methodology
+What are the questions we are going to answer?
+	1 Are certain types of haunted locations (e.g., cemeteries, schools, universities) more common in specific states?
+	2 How does the distance of haunted locations from city centers relate to the total number of haunted locations in a city?
+### How to Answer the questions & Why ?
+- *Chi-Square Test of Independence* was appropriate for analyzing categorical relationships between location types and states.
+- *Linear Regression* was suitable for examining numerical relationships, particularly between distance from city centers and the number of haunted locations.
 
+### Assumptions
+- For the chi-square test, it was assumed that the data is random and that each observation is independent, and the each variable has more than 5 observations
+- For regression analysis, assumptions included linearity, independence of errors, homoscedasticity, and normality of residuals. Diagnostic checks were conducted to validate these assumptions.
+
+### Technical Details
+#### Analytical Process
+1. *Data Cleaning:*
+   - Removed redundant columns such as country and standardized location names.
+   - Addressed missing values by imputing coordinates or filtering incomplete rows.
+   - Eliminated duplicate rows to ensure data integrity.
+
+2. *Exploratory Data Analysis (EDA):*
+   - Summarized key variables and generated visualizations (e.g., word clouds, bar plots, and maps).
+
+3. *Chi-Square Test:*
+
+	Null Hypothesis $H_0$ : Distribution of location types (cementry, university and hospital) are independent of the state
+
+
+  Alternative Hypotheses $H_A$ : Distribution of location types (cementry, university and hospital) are dependent of the state.
+
+   - Created a contingency table to test the relationship between location type and state.
+   - Conducted the test using the chisq.test function in R.
+
+5. *Linear Regression Modeling:*
+    $$
+    \text{Number of Haunted Places} = \beta_0 + \beta_1 \times \text{Average Distance from City Center}
+    $$
+   - Calculated distances of haunted locations from city centers.
+   - Aggregated data by city to compute average distances and total haunted locations by using __Haversine distance formula__.
+   - Built a regression model using the lm() function in R.
+
+#### Parameters and Thresholds
+- For chi-square tests, a significance level of 0.05 was used to determine statistical significance.
+#### Data Transformations
+- Calculated distance_from_center as the Haversine distance between latitude and longitude of the haunted location and the city center. (In the presentation we used Euclidean distance but realized that it is not accurate, when dealing with curvilinear surfaces)
+- Standardized location names to address inconsistencies and typos.
+- Binned distances into 2km intervals to analyze the relationship between distance from city center and the number of haunted locations.
+
+
+#### Tools and Packages
+The following R packages were utilized:
+- **dplyr and tidyr:** For data cleaning and manipulation.
+- **ggplot2:** For creating visualizations.
+- **knitr and kableExtra:** For generating tables in the report.
+- **leaflet and wordcloud2:** For interactive maps and word clouds.
+- **regular expression:** for word processing, filtering and searching.
+
+
+## Analysis
+
+### Results Presentation
+
+#### 1. Location Type and State Dependency (Chi-Square Test of Independence)
+To assess whether the distribution of haunted location types (e.g., cemeteries, universities, hospitals) varies significantly across states, a chi-square test of independence was conducted.
+
+- **Test Results:**
+  - **Chi-Square Statistic**: 252.9  
+  - **Degrees of Freedom (df)**: 98  
+  - **p-value**: $\boxed{1.218 \times 10^{-15}}$  
+
+- **Key Findings:**
+  - The chi-square test yielded a highly significant result (\( p < 0.05 \)), indicating a strong relationship between the type of haunted location and the state it is located in.
+  - The observed dependence suggests that the types of haunted locations (e.g., cemeteries, universities) are not evenly distributed across states. This may reflect regional differences in cultural, historical, or geographic factors that influence the prevalence of certain haunted locations.
+
+- **Visual Summary:**
+
+![Distribution of haunted location](location_distribution_by_state.png){width=500px height=300px}
+  
+  - A bar plot was used to display the contingency table, visually highlighting the differences in the distribution of haunted location types across states.
+
+- **Interpretation:**
+  - These findings suggest that specific states may have more of certain haunted location types due to unique regional factors. For example, a state with a rich history of educational institutions may exhibit a higher prevalence of haunted universities. Similarly, regions with older, historic graveyards may report more haunted cemeteries.
+
+#### 2. Relationship Between Distance from City Centers and Number of Haunted Locations (Linear Regression)
+
+![Scatter plot of the location count with respect to distance from city center](distance_plot.png){width=500px height=300px}
+
+We can clearly see that the number of haunted locations are more near to the city center.
+A linear regression analysis was performed to explore whether the average distance of haunted locations from city centers predicts the total number of haunted locations in a city. The regression model is expressed as:
+
+    $$
+    \text{Number of Haunted Places} = \beta_0 + \beta_1 \times \text{Average Distance from City Center}
+    $$
+
+- **Model Summary:**
+  - **Intercept $\beta_0$**: \( 2228.41 \pm 16.44 \), \( t = 135.51 \), \( $p < 2 \times 10^{-16}$ \)  
+  - **Slope $\beta_1$**: \( -0.4759 \pm 0.0361 \), \( t = -13.18 \), \( $p < 2 \times 10^{-16}$ \)  
+  - **Residual Standard Error**: 1596  
+  - **R-squared $R^2$**: \( 0.0179 \) (1.79% of variance explained)  
+
+- **Key Findings:**
+  - The negative coefficient \($\beta_1 < 0$ \) indicates an inverse relationship between the average distance of haunted locations from city centers and the total number of haunted places.  
+  - This suggests that cities with haunted locations closer to their centers tend to have more haunted places overall.
+  - However, the low \($R^2$\) value indicates that only 1.79% of the variance in the number of haunted locations is explained by distance, implying that additional factors are likely contributing to this relationship.
+
+- **Visual Summary:**
+  - A **scatter plot** with a fitted regression line was created to illustrate the negative relationship between distance and the number of haunted places.
+  - **Residual diagnostics** were conducted:
+    - **Residuals vs. Fitted**: Confirmed the linearity of the model.  
+    - **Q-Q Plot**: Showed non normality of residuals.  
+    - **Scale-Location Plot**: Suggested homoscedasticity of residuals.  
+    - **Residuals vs. Leverage**: Highlighted potential outliers influencing the model.
+    
+![Diagnostic plots](diagnostic_plots.png){width=500px height=300px}
+
+- **Interpretation:**
+  - While the negative relationship between distance and the number of haunted places is statistically significant, the low explanatory power $R^2$ suggests that this variable alone is insufficient to explain the total number of haunted locations.  
+  - Other variables, such as population density, historical significance, or urbanization levels, may play a significant role in determining the distribution of haunted places.
+
+### Quality Checks and Limitations
+
+1. **Assumption Checks for Chi-Square Test:**
+   - The minimum expected frequency condition for the chi-square test was met, ensuring the validity of the test.
+
+2. **Regression Diagnostics:**
+   - **Linearity**: The relationship between the predictors and the outcome variable was approximately linear.  
+   - **Homoscedasticity**: Residual plots suggested constant variance.  
+   - **Normality**: Q-Q plots indicated that the residuals were approximately normally distributed.
+
+3. **Limitations:**
+   - The regression model has a low \( R^2 \), indicating that most of the variance in the number of haunted locations remains unexplained. Additional predictors could enhance the model.
+   - Potential outliers in the data might influence the regression results and require further examination.
+   - Chi-square results, while significant, do not quantify the strength of the relationship or provide causal insights.
+
+4. **Decisions Taken:**
+   - Focused on average distance as the primary predictor to simplify the analysis while maintaining interpretability.
+   - Retained significant results but acknowledged limitations in predictive power and model fit.
+
+### Summary of Findings
+- The chi-square test confirmed a significant association between location types and states, highlighting regional variations in haunted locations.
+- The linear regression model revealed a statistically significant, albeit weak, negative relationship between distance from city centers and the number of haunted locations, suggesting that proximity to urban centers may slightly influence the prevalence of haunted places.
 
 
 
